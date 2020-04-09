@@ -1,5 +1,7 @@
 package cpu
 
+type word = uint16
+
 type StatusRegister struct {
 	N, V, R, B, D, I, Z, C bool
 }
@@ -7,8 +9,8 @@ type StatusRegister struct {
 type Registers struct {
 	A, X, Y byte
 	P       *StatusRegister
-	SP      uint16
-	PC      uint16
+	SP      word
+	PC      word
 }
 
 type CPU struct {
@@ -16,8 +18,52 @@ type CPU struct {
 	Memory    []byte
 }
 
-func (c *CPU) readWord(addr uint16) uint16 {
-	return uint16(c.Memory[addr])<<8 + uint16(c.Memory[addr+1])
+func (c *CPU) readByte(addr word) byte {
+	return c.Memory[addr]
+}
+
+func (c *CPU) readWord(addr word) word {
+	return word(c.Memory[addr])<<8 + word(c.Memory[addr+1])
+}
+
+func (c *CPU) write(addr word, data byte) {
+	c.Memory[addr] = data
+}
+
+func (n *CPU) fetch() byte {
+	addr := n.Registers.PC
+	n.Registers.PC++
+	return n.readByte(addr)
+}
+
+func (c *CPU) exec(baseName string, opeland word, mode string) {
+	switch baseName {
+	case "ADC":
+		var m byte
+		if mode == "immediate" {
+			m = byte(opeland)
+		} else {
+			m = c.readByte(opeland)
+		}
+		if c.Registers.P.C {
+			m++
+		}
+		c.Registers.P.V = c.Registers.A < 0x80 && c.Registers.A+m > 0x7F
+		c.Registers.P.C = c.Registers.A+m <= c.Registers.A
+		c.Registers.A += m
+		c.Registers.P.N = c.Registers.A>>7 == 1
+		c.Registers.P.Z = c.Registers.A == 0
+	case "LDA":
+		if mode == "immediate" {
+			c.Registers.A = byte(opeland)
+		} else {
+			c.Registers.A = c.readByte(opeland)
+		}
+		c.Registers.P.N = c.Registers.A>>7 == 1
+		c.Registers.P.Z = c.Registers.A == 0
+	case "STA":
+		c.write(opeland, c.Registers.A)
+	}
 }
 
 func (c *CPU) Reset() {
