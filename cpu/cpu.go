@@ -49,6 +49,11 @@ func (c *CPU) getByteByMode(opeland word, mode string) byte {
 	}
 }
 
+func (c *CPU) updateStatuses(value byte) {
+	c.Registers.P.N = nthBit(value, 7) == 1
+	c.Registers.P.Z = value == 0
+}
+
 func (c *CPU) exec(baseName string, opeland word, mode string) {
 	switch baseName {
 	case "ADC":
@@ -59,8 +64,7 @@ func (c *CPU) exec(baseName string, opeland word, mode string) {
 		c.Registers.P.V = c.Registers.A < 0x80 && c.Registers.A+m > 0x7F
 		c.Registers.P.C = c.Registers.A+m <= c.Registers.A
 		c.Registers.A += m
-		c.Registers.P.N = nthBit(c.Registers.A, 7) == 1
-		c.Registers.P.Z = c.Registers.A == 0
+		c.updateStatuses(c.Registers.A)
 	case "SBC":
 		m := c.getByteByMode(opeland, mode)
 		if c.Registers.P.C {
@@ -69,83 +73,71 @@ func (c *CPU) exec(baseName string, opeland word, mode string) {
 		c.Registers.P.V = c.Registers.A > 0x7F && c.Registers.A-m < 0x80
 		c.Registers.P.C = c.Registers.A-m >= c.Registers.A
 		c.Registers.A -= m
-		c.Registers.P.N = nthBit(c.Registers.A, 7) == 1
-		c.Registers.P.Z = c.Registers.A == 0
+		c.updateStatuses(c.Registers.A)
 	case "AND":
 		c.Registers.A &= c.getByteByMode(opeland, mode)
-		c.Registers.P.N = nthBit(c.Registers.A, 7) == 1
-		c.Registers.P.Z = c.Registers.A == 0
+		c.updateStatuses(c.Registers.A)
 	case "ORA":
 		c.Registers.A |= c.getByteByMode(opeland, mode)
-		c.Registers.P.N = nthBit(c.Registers.A, 7) == 1
-		c.Registers.P.Z = c.Registers.A == 0
+		c.updateStatuses(c.Registers.A)
 	case "EOR":
 		c.Registers.A ^= c.getByteByMode(opeland, mode)
-		c.Registers.P.N = nthBit(c.Registers.A, 7) == 1
-		c.Registers.P.Z = c.Registers.A == 0
+		c.updateStatuses(c.Registers.A)
 	case "ASL":
 		if mode == "accumulator" {
 			c.Registers.P.C = nthBit(c.Registers.A, 7) == 1
 			c.Registers.A <<= 1
-			c.Registers.P.N = nthBit(c.Registers.A, 7) == 1
-			c.Registers.P.Z = c.Registers.A == 0
+			c.updateStatuses(c.Registers.A)
 		} else {
 			data := c.readByte(opeland)
 			c.Registers.P.C = nthBit(data, 7) == 1
 			data <<= 1
 			c.write(opeland, data)
-			c.Registers.P.N = nthBit(data, 7) == 1
-			c.Registers.P.Z = data == 0
+			c.updateStatuses(data)
 		}
 	case "LSR":
 		if mode == "accumulator" {
 			c.Registers.P.C = nthBit(c.Registers.A, 0) == 1
 			c.Registers.A >>= 1
-			c.Registers.P.Z = c.Registers.A == 0
+			c.updateStatuses(c.Registers.A)
 		} else {
 			data := c.readByte(opeland)
 			c.Registers.P.C = nthBit(data, 0) == 1
 			data >>= 1
 			c.write(opeland, data)
-			c.Registers.P.Z = data == 0
+			c.updateStatuses(data)
 		}
-		c.Registers.P.N = false
 	case "ROL":
 		if mode == "accumulator" {
 			b := nthBit(c.Registers.A, 7)
 			c.Registers.P.C = b == 1
 			c.Registers.A = c.Registers.A<<1 + b
-			c.Registers.P.N = nthBit(c.Registers.A, 7) == 1
-			c.Registers.P.Z = c.Registers.A == 0
+			c.updateStatuses(c.Registers.A)
 		} else {
 			data := c.readByte(opeland)
 			b := nthBit(data, 7)
 			c.Registers.P.C = b == 1
 			data = data<<1 + b
 			c.write(opeland, data)
-			c.Registers.P.N = nthBit(data, 7) == 1
-			c.Registers.P.Z = data == 0
+			c.updateStatuses(data)
 		}
 	case "ROR":
 		if mode == "accumulator" {
 			b := nthBit(c.Registers.A, 0)
 			c.Registers.P.C = b == 1
 			c.Registers.A = c.Registers.A>>1 + b<<7
-			c.Registers.P.N = nthBit(c.Registers.A, 7) == 1
-			c.Registers.P.Z = c.Registers.A == 0
+			c.updateStatuses(c.Registers.A)
 		} else {
 			data := c.readByte(opeland)
 			b := nthBit(data, 0)
 			c.Registers.P.C = b == 1
 			data = data>>1 + b<<7
 			c.write(opeland, data)
-			c.Registers.P.N = nthBit(data, 7) == 1
-			c.Registers.P.Z = data == 0
+			c.updateStatuses(data)
 		}
 	case "LDA":
 		c.Registers.A = c.getByteByMode(opeland, mode)
-		c.Registers.P.N = nthBit(c.Registers.A, 7) == 1
-		c.Registers.P.Z = c.Registers.A == 0
+		c.updateStatuses(c.Registers.A)
 	case "STA":
 		c.write(opeland, c.Registers.A)
 	}
