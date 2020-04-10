@@ -33,22 +33,28 @@ func (c *CPU) readByte(addr word) byte {
 }
 
 func (c *CPU) readWord(addr word) word {
-	return word(c.Memory[addr])<<8 + word(c.Memory[addr+1])
+	return word(c.readByte(addr))<<8 + word(c.readByte(addr+1))
 }
 
-func (c *CPU) write(addr word, data byte) {
+func (c *CPU) writeByte(addr word, data byte) {
 	c.Memory[addr] = data
 }
 
-func (n *CPU) fetch() byte {
+func (n *CPU) fetchByte() byte {
 	addr := n.Registers.PC
 	n.Registers.PC++
 	return n.readByte(addr)
 }
 
+func (n *CPU) fetchWord() word {
+	addr := n.Registers.PC
+	n.Registers.PC += 2
+	return n.readWord(addr)
+}
+
 func (c *CPU) push(data byte) {
-	// c.write(c.Registers.SP|0x0100, data)
-	c.write(c.Registers.SP, data)
+	// c.writeByte(c.Registers.SP|0x0100, data)
+	c.writeByte(c.Registers.SP, data)
 	c.Registers.SP--
 }
 
@@ -58,8 +64,8 @@ func (c *CPU) pop() byte {
 	return c.readByte(c.Registers.SP)
 }
 
-func (c *CPU) getByteByMode(opeland word, mode string) byte {
-	switch mode {
+func (c *CPU) getByteByAddressing(opeland word, addressing string) byte {
+	switch addressing {
 	case "immediate":
 		return byte(opeland)
 	default:
@@ -67,10 +73,51 @@ func (c *CPU) getByteByMode(opeland word, mode string) byte {
 	}
 }
 
-func (c *CPU) exec(instruction string, opeland word, mode string) error {
-	switch instruction {
+func (c *CPU) fetchOpeland(addressing string) (word, error) {
+	switch addressing {
+	case "accumulator":
+		return 0, nil
+	case "implied":
+		return 0, nil
+	case "immediate":
+		return word(c.fetchByte()), nil
+	case "zeroPage":
+		return word(c.fetchByte()), nil
+	case "zeroPageX":
+		addr := c.fetchByte()
+		return word(addr + c.Registers.X), nil
+	case "zeroPageY":
+		addr := c.fetchByte()
+		return word(addr + c.Registers.Y), nil
+	case "absolute":
+		return c.fetchWord(), nil
+	case "absoluteX":
+		addr := c.fetchWord()
+		return addr + word(c.Registers.X), nil
+	case "absoluteY":
+		addr := c.fetchWord()
+		return addr + word(c.Registers.Y), nil
+	case "preIndexedIndirect":
+		baseAddr := word(c.fetchByte()) + word(c.Registers.X)
+		addr := word(c.readByte(baseAddr)) + word(c.readByte(baseAddr+1))<<8
+		return addr, nil
+	case "postIndexedIndirect":
+		baseAddr := word(c.fetchByte())
+		addr := word(c.readByte(baseAddr)) + word(c.readByte(baseAddr+1))<<8 + word(c.Registers.Y)
+		return addr, nil
+	case "indirectAbsolute":
+		baseAddr := c.fetchWord()
+		addr := word(c.readByte(baseAddr)) + word(c.readByte(baseAddr|((baseAddr)+1)))<<8
+		return addr, nil
+	default:
+		return 0, fmt.Errorf("unknown addressing %s", addressing)
+	}
+}
+
+func (c *CPU) exec(opcode string, opeland word, addressing string) error {
+	switch opcode {
 	case "ADC":
-		m := c.getByteByMode(opeland, mode)
+		m := c.getByteByAddressing(opeland, addressing)
 		if c.Registers.P.C {
 			m++
 		}
@@ -80,7 +127,7 @@ func (c *CPU) exec(instruction string, opeland word, mode string) error {
 		c.Registers.P.N = isNegative(c.Registers.A)
 		c.Registers.P.Z = c.Registers.A == 0
 	case "SBC":
-		m := c.getByteByMode(opeland, mode)
+		m := c.getByteByAddressing(opeland, addressing)
 		if c.Registers.P.C {
 			m++
 		}
@@ -90,19 +137,19 @@ func (c *CPU) exec(instruction string, opeland word, mode string) error {
 		c.Registers.P.N = isNegative(c.Registers.A)
 		c.Registers.P.Z = c.Registers.A == 0
 	case "AND":
-		c.Registers.A &= c.getByteByMode(opeland, mode)
+		c.Registers.A &= c.getByteByAddressing(opeland, addressing)
 		c.Registers.P.N = isNegative(c.Registers.A)
 		c.Registers.P.Z = c.Registers.A == 0
 	case "ORA":
-		c.Registers.A |= c.getByteByMode(opeland, mode)
+		c.Registers.A |= c.getByteByAddressing(opeland, addressing)
 		c.Registers.P.N = isNegative(c.Registers.A)
 		c.Registers.P.Z = c.Registers.A == 0
 	case "EOR":
-		c.Registers.A ^= c.getByteByMode(opeland, mode)
+		c.Registers.A ^= c.getByteByAddressing(opeland, addressing)
 		c.Registers.P.N = isNegative(c.Registers.A)
 		c.Registers.P.Z = c.Registers.A == 0
 	case "ASL":
-		if mode == "accumulator" {
+		if addressing == "accumulator" {
 			c.Registers.P.C = nthBit(c.Registers.A, 7) == 1
 			c.Registers.A <<= 1
 			c.Registers.P.N = isNegative(c.Registers.A)
@@ -111,12 +158,12 @@ func (c *CPU) exec(instruction string, opeland word, mode string) error {
 			data := c.readByte(opeland)
 			c.Registers.P.C = nthBit(data, 7) == 1
 			data <<= 1
-			c.write(opeland, data)
+			c.writeByte(opeland, data)
 			c.Registers.P.N = isNegative(data)
 			c.Registers.P.Z = data == 0
 		}
 	case "LSR":
-		if mode == "accumulator" {
+		if addressing == "accumulator" {
 			c.Registers.P.C = nthBit(c.Registers.A, 0) == 1
 			c.Registers.A >>= 1
 			c.Registers.P.N = isNegative(c.Registers.A)
@@ -125,12 +172,12 @@ func (c *CPU) exec(instruction string, opeland word, mode string) error {
 			data := c.readByte(opeland)
 			c.Registers.P.C = nthBit(data, 0) == 1
 			data >>= 1
-			c.write(opeland, data)
+			c.writeByte(opeland, data)
 			c.Registers.P.N = isNegative(data)
 			c.Registers.P.Z = data == 0
 		}
 	case "ROL":
-		if mode == "accumulator" {
+		if addressing == "accumulator" {
 			b := nthBit(c.Registers.A, 7)
 			c.Registers.P.C = b == 1
 			c.Registers.A = c.Registers.A<<1 + b
@@ -141,12 +188,12 @@ func (c *CPU) exec(instruction string, opeland word, mode string) error {
 			b := nthBit(data, 7)
 			c.Registers.P.C = b == 1
 			data = data<<1 + b
-			c.write(opeland, data)
+			c.writeByte(opeland, data)
 			c.Registers.P.N = isNegative(data)
 			c.Registers.P.Z = data == 0
 		}
 	case "ROR":
-		if mode == "accumulator" {
+		if addressing == "accumulator" {
 			b := nthBit(c.Registers.A, 0)
 			c.Registers.P.C = b == 1
 			c.Registers.A = c.Registers.A>>1 + b<<7
@@ -157,7 +204,7 @@ func (c *CPU) exec(instruction string, opeland word, mode string) error {
 			b := nthBit(data, 0)
 			c.Registers.P.C = b == 1
 			data = data>>1 + b<<7
-			c.write(opeland, data)
+			c.writeByte(opeland, data)
 			c.Registers.P.N = isNegative(data)
 			c.Registers.P.Z = data == 0
 		}
@@ -218,17 +265,17 @@ func (c *CPU) exec(instruction string, opeland word, mode string) error {
 		// c.Registers.P = c.pop()
 		// c.Registers.PC = word(c.pop()) + word(c.pop())<<8 + 1
 	case "CMP":
-		data := c.Registers.A - c.getByteByMode(opeland, mode)
+		data := c.Registers.A - c.getByteByAddressing(opeland, addressing)
 		c.Registers.P.N = isNegative(data)
 		c.Registers.P.Z = data == 0
 		c.Registers.P.C = data >= c.Registers.A
 	case "CPX":
-		data := c.Registers.X - c.getByteByMode(opeland, mode)
+		data := c.Registers.X - c.getByteByAddressing(opeland, addressing)
 		c.Registers.P.N = isNegative(data)
 		c.Registers.P.Z = data == 0
 		c.Registers.P.C = data >= c.Registers.X
 	case "CPY":
-		data := c.Registers.Y - c.getByteByMode(opeland, mode)
+		data := c.Registers.Y - c.getByteByAddressing(opeland, addressing)
 		c.Registers.P.N = isNegative(data)
 		c.Registers.P.Z = data == 0
 		c.Registers.P.C = data >= c.Registers.Y
@@ -236,12 +283,12 @@ func (c *CPU) exec(instruction string, opeland word, mode string) error {
 		m := c.readByte(opeland) + 1
 		c.Registers.P.N = isNegative(m)
 		c.Registers.P.Z = m == 0
-		c.write(opeland, m)
+		c.writeByte(opeland, m)
 	case "DEC":
 		m := c.readByte(opeland) - 1
 		c.Registers.P.N = isNegative(m)
 		c.Registers.P.Z = m == 0
-		c.write(opeland, m)
+		c.writeByte(opeland, m)
 	case "INX":
 		c.Registers.X++
 		c.Registers.P.N = isNegative(c.Registers.X)
@@ -273,23 +320,23 @@ func (c *CPU) exec(instruction string, opeland word, mode string) error {
 	case "CLV":
 		c.Registers.P.V = false
 	case "LDA":
-		c.Registers.A = c.getByteByMode(opeland, mode)
+		c.Registers.A = c.getByteByAddressing(opeland, addressing)
 		c.Registers.P.N = isNegative(c.Registers.A)
 		c.Registers.P.Z = c.Registers.A == 0
 	case "LDX":
-		c.Registers.X = c.getByteByMode(opeland, mode)
+		c.Registers.X = c.getByteByAddressing(opeland, addressing)
 		c.Registers.P.N = isNegative(c.Registers.X)
 		c.Registers.P.Z = c.Registers.X == 0
 	case "LDY":
-		c.Registers.Y = c.getByteByMode(opeland, mode)
+		c.Registers.Y = c.getByteByAddressing(opeland, addressing)
 		c.Registers.P.N = isNegative(c.Registers.Y)
 		c.Registers.P.Z = c.Registers.Y == 0
 	case "STA":
-		c.write(opeland, c.Registers.A)
+		c.writeByte(opeland, c.Registers.A)
 	case "STX":
-		c.write(opeland, c.Registers.X)
+		c.writeByte(opeland, c.Registers.X)
 	case "STY":
-		c.write(opeland, c.Registers.Y)
+		c.writeByte(opeland, c.Registers.Y)
 	case "TXA":
 		c.Registers.A = c.Registers.X
 		c.Registers.P.N = isNegative(c.Registers.A)
@@ -325,7 +372,7 @@ func (c *CPU) exec(instruction string, opeland word, mode string) error {
 	case "NOP":
 		// no operation
 	default:
-		return fmt.Errorf("unknown instruction: %s", instruction)
+		return fmt.Errorf("unknown opcode: %s", opcode)
 	}
 	return nil
 }
