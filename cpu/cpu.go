@@ -17,7 +17,7 @@ type Registers struct {
 
 type CPU struct {
 	Registers *Registers
-	Memory    []byte
+	Memory    [0xFFFF + 1]byte
 }
 
 func nthBit(v byte, n uint8) uint8 {
@@ -28,12 +28,24 @@ func isNegative(v byte) bool {
 	return nthBit(v, 7) == 1
 }
 
+func New(programROM []byte) *CPU {
+	var m [0xFFFF + 1]byte
+
+	for i := 0; i < len(programROM); i++ {
+		m[0x8000+i] = programROM[i]
+	}
+	c := &CPU{Memory: m}
+	c.Reset()
+
+	return c
+}
+
 func (c *CPU) readByte(addr word) byte {
 	return c.Memory[addr]
 }
 
 func (c *CPU) readWord(addr word) word {
-	return word(c.readByte(addr))<<8 + word(c.readByte(addr+1))
+	return word(c.readByte(addr)) + word(c.readByte(addr+1))<<8
 }
 
 func (c *CPU) writeByte(addr word, data byte) {
@@ -95,7 +107,7 @@ func (c *CPU) fetchOpeland(addressing string) (word, error) {
 	case "Zeropage, Y":
 		opeland = word(c.fetchByte() + c.Registers.Y)
 	case "Relative":
-		// TODO
+		opeland = word(c.fetchByte()) + c.Registers.PC - 0xFF
 	case "(Indirect, X)":
 		baseAddr := word(c.fetchByte()) + word(c.Registers.X)
 		opeland = word(c.readByte(baseAddr)) + word(c.readByte(baseAddr+1))<<8
@@ -396,7 +408,9 @@ func (c *CPU) Reset() {
 }
 
 func (c *CPU) Run() (uint8, error) {
-	i := instructionSets[c.fetchByte()]
+	b := c.fetchByte()
+	i := instructionSets[b]
+	// fmt.Printf("%x %x: %v\n", c.Registers.PC-1, b, i)
 	opeland, err := c.fetchOpeland(i.Addressing)
 	if err != nil {
 		return 0, err
@@ -407,16 +421,4 @@ func (c *CPU) Run() (uint8, error) {
 	}
 
 	return i.Cycles, nil
-}
-
-func New(programROM []byte) *CPU {
-	m := make([]byte, 0xFFFF+1)
-
-	for i := 0; i < len(programROM); i++ {
-		m[0x8000+i] = programROM[i]
-	}
-	c := &CPU{Memory: m}
-	c.Reset()
-
-	return c
 }

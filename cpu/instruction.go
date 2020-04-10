@@ -7,7 +7,7 @@ type InstructionSet struct {
 	Cycles     uint8
 }
 
-var instructionSets = map[byte]InstructionSet{
+var instructionSets = map[byte]*InstructionSet{
 	0xA9: {"LDA", "Immediate", 2, 2},
 	0xA5: {"LDA", "Zeropage", 2, 3},
 	0xB5: {"LDA", "Zeropage, X", 2, 4},

@@ -34,3 +34,13 @@ func New(path string) (*NES, error) {
 
 	return nes, nil
 }
+
+func (n *NES) Run() error {
+	for i := 0; i < 65535; i++ {
+		_, err := n.cpu.Run()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

@@ -10,3 +10,11 @@ func TestNew(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestRun(t *testing.T) {
+	n, _ := New("./../sample1/sample1.nes")
+	err := n.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
