@@ -66,7 +66,7 @@ func (c *CPU) pop() byte {
 
 func (c *CPU) getByteByAddressing(opeland word, addressing string) byte {
 	switch addressing {
-	case "immediate":
+	case "Immediate":
 		return byte(opeland)
 	default:
 		return c.readByte(opeland)
@@ -74,44 +74,41 @@ func (c *CPU) getByteByAddressing(opeland word, addressing string) byte {
 }
 
 func (c *CPU) fetchOpeland(addressing string) (word, error) {
+	var opeland word
 	switch addressing {
-	case "accumulator":
-		return 0, nil
-	case "implied":
-		return 0, nil
-	case "immediate":
-		return word(c.fetchByte()), nil
-	case "zeroPage":
-		return word(c.fetchByte()), nil
-	case "zeroPageX":
-		addr := c.fetchByte()
-		return word(addr + c.Registers.X), nil
-	case "zeroPageY":
-		addr := c.fetchByte()
-		return word(addr + c.Registers.Y), nil
-	case "absolute":
-		return c.fetchWord(), nil
-	case "absoluteX":
-		addr := c.fetchWord()
-		return addr + word(c.Registers.X), nil
-	case "absoluteY":
-		addr := c.fetchWord()
-		return addr + word(c.Registers.Y), nil
-	case "preIndexedIndirect":
+	case "Accumulator":
+		// no opeland
+	case "Implied":
+		// no opeland
+	case "Immediate":
+		opeland = word(c.fetchByte())
+	case "Absolute":
+		opeland = c.fetchWord()
+	case "Absolute, X":
+		opeland = c.fetchWord() + word(c.Registers.X)
+	case "Absolute, Y":
+		opeland = c.fetchWord() + word(c.Registers.Y)
+	case "Zeropage":
+		opeland = word(c.fetchByte())
+	case "Zeropage, X":
+		opeland = word(c.fetchByte() + c.Registers.X)
+	case "Zeropage, Y":
+		opeland = word(c.fetchByte() + c.Registers.Y)
+	case "Relative":
+		// TODO
+	case "(Indirect, X)":
 		baseAddr := word(c.fetchByte()) + word(c.Registers.X)
-		addr := word(c.readByte(baseAddr)) + word(c.readByte(baseAddr+1))<<8
-		return addr, nil
-	case "postIndexedIndirect":
+		opeland = word(c.readByte(baseAddr)) + word(c.readByte(baseAddr+1))<<8
+	case "(Indirect), Y":
 		baseAddr := word(c.fetchByte())
-		addr := word(c.readByte(baseAddr)) + word(c.readByte(baseAddr+1))<<8 + word(c.Registers.Y)
-		return addr, nil
-	case "indirectAbsolute":
+		opeland = word(c.readByte(baseAddr)) + word(c.readByte(baseAddr+1))<<8 + word(c.Registers.Y)
+	case "(Indirect)":
 		baseAddr := c.fetchWord()
-		addr := word(c.readByte(baseAddr)) + word(c.readByte(baseAddr|((baseAddr)+1)))<<8
-		return addr, nil
+		opeland = word(c.readByte(baseAddr)) + word(c.readByte((baseAddr&0xFF00)|(((baseAddr&0xFF)+1)&0xFF)))<<8
 	default:
 		return 0, fmt.Errorf("unknown addressing %s", addressing)
 	}
+	return opeland, nil
 }
 
 func (c *CPU) exec(opcode string, opeland word, addressing string) error {
@@ -149,7 +146,7 @@ func (c *CPU) exec(opcode string, opeland word, addressing string) error {
 		c.Registers.P.N = isNegative(c.Registers.A)
 		c.Registers.P.Z = c.Registers.A == 0
 	case "ASL":
-		if addressing == "accumulator" {
+		if addressing == "Accumulator" {
 			c.Registers.P.C = nthBit(c.Registers.A, 7) == 1
 			c.Registers.A <<= 1
 			c.Registers.P.N = isNegative(c.Registers.A)
@@ -163,7 +160,7 @@ func (c *CPU) exec(opcode string, opeland word, addressing string) error {
 			c.Registers.P.Z = data == 0
 		}
 	case "LSR":
-		if addressing == "accumulator" {
+		if addressing == "Accumulator" {
 			c.Registers.P.C = nthBit(c.Registers.A, 0) == 1
 			c.Registers.A >>= 1
 			c.Registers.P.N = isNegative(c.Registers.A)
@@ -177,7 +174,7 @@ func (c *CPU) exec(opcode string, opeland word, addressing string) error {
 			c.Registers.P.Z = data == 0
 		}
 	case "ROL":
-		if addressing == "accumulator" {
+		if addressing == "Accumulator" {
 			b := nthBit(c.Registers.A, 7)
 			c.Registers.P.C = b == 1
 			c.Registers.A = c.Registers.A<<1 + b
@@ -193,7 +190,7 @@ func (c *CPU) exec(opcode string, opeland word, addressing string) error {
 			c.Registers.P.Z = data == 0
 		}
 	case "ROR":
-		if addressing == "accumulator" {
+		if addressing == "Accumulator" {
 			b := nthBit(c.Registers.A, 0)
 			c.Registers.P.C = b == 1
 			c.Registers.A = c.Registers.A>>1 + b<<7
@@ -396,6 +393,20 @@ func (c *CPU) Reset() {
 		PC: 0x0000,
 	}
 	c.Registers.PC = c.readWord(0xFFFC)
+}
+
+func (c *CPU) Run() (uint8, error) {
+	i := instructionSets[c.fetchByte()]
+	opeland, err := c.fetchOpeland(i.Addressing)
+	if err != nil {
+		return 0, err
+	}
+	err = c.exec(i.Opcode, opeland, i.Addressing)
+	if err != nil {
+		return 0, err
+	}
+
+	return i.Cycles, nil
 }
 
 func New(programROM []byte) *CPU {
