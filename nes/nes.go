@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 
 	"github.com/dqn/gones/cpu"
+	"github.com/dqn/gones/ppu"
 )
 
 const (
@@ -13,8 +14,8 @@ const (
 )
 
 type NES struct {
-	characterROM []byte
-	cpu          *cpu.CPU
+	ppu *ppu.PPU
+	cpu *cpu.CPU
 }
 
 func New(path string) (*NES, error) {
@@ -28,8 +29,8 @@ func New(path string) (*NES, error) {
 	characterROMEnd := programROMEnd + characterROMSizePerPage*characterROMPages
 
 	nes := &NES{
-		characterROM: buf[programROMEnd:characterROMEnd],
-		cpu:          cpu.New(buf[nesHeaderSize:programROMEnd]),
+		ppu: ppu.New(buf[programROMEnd:characterROMEnd]),
+		cpu: cpu.New(buf[nesHeaderSize:programROMEnd]),
 	}
 
 	return nes, nil

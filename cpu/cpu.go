@@ -1,129 +1,130 @@
 package cpu
 
-import "fmt"
+import (
+	"fmt"
+)
 
-type word = uint16
+type memory = [0x10000]uint8
 
 type StatusRegister struct {
 	N, V, R, B, D, I, Z, C bool
 }
 
 type Registers struct {
-	A, X, Y byte
+	A, X, Y uint8
 	P       *StatusRegister
-	SP      word
-	PC      word
+	SP      uint16
+	PC      uint16
 }
 
 type CPU struct {
 	Registers *Registers
-	Memory    [0xFFFF + 1]byte
+	Memory    *memory
 }
 
-func nthBit(v byte, n uint8) uint8 {
+func nthBit(v uint8, n uint8) uint8 {
 	return uint8((v >> n) & 1)
 }
 
-func isNegative(v byte) bool {
+func isNegative(v uint8) bool {
 	return nthBit(v, 7) == 1
 }
 
-func New(programROM []byte) *CPU {
-	var m [0xFFFF + 1]byte
-
+func New(programROM []uint8) *CPU {
+	var m memory
 	for i := 0; i < len(programROM); i++ {
 		m[0x8000+i] = programROM[i]
 	}
-	c := &CPU{Memory: m}
+	c := &CPU{Memory: &m}
 	c.Reset()
 
 	return c
 }
 
-func (c *CPU) readByte(addr word) byte {
+func (c *CPU) readByte(addr uint16) uint8 {
 	return c.Memory[addr]
 }
 
-func (c *CPU) readWord(addr word) word {
-	return word(c.readByte(addr)) + word(c.readByte(addr+1))<<8
+func (c *CPU) readWord(addr uint16) uint16 {
+	return uint16(c.readByte(addr)) + uint16(c.readByte(addr+1))<<8
 }
 
-func (c *CPU) writeByte(addr word, data byte) {
+func (c *CPU) writeByte(addr uint16, data uint8) {
 	c.Memory[addr] = data
 }
 
-func (n *CPU) fetchByte() byte {
+func (n *CPU) fetchByte() uint8 {
 	addr := n.Registers.PC
 	n.Registers.PC++
 	return n.readByte(addr)
 }
 
-func (n *CPU) fetchWord() word {
+func (n *CPU) fetchWord() uint16 {
 	addr := n.Registers.PC
 	n.Registers.PC += 2
 	return n.readWord(addr)
 }
 
-func (c *CPU) push(data byte) {
+func (c *CPU) push(data uint8) {
 	// c.writeByte(c.Registers.SP|0x0100, data)
 	c.writeByte(c.Registers.SP, data)
 	c.Registers.SP--
 }
 
-func (c *CPU) pop() byte {
+func (c *CPU) pop() uint8 {
 	c.Registers.SP++
 	// return c.readByte(c.Registers.SP|0x0100)
 	return c.readByte(c.Registers.SP)
 }
 
-func (c *CPU) getByteByAddressing(opeland word, addressing string) byte {
+func (c *CPU) getByteByAddressing(opeland uint16, addressing string) uint8 {
 	switch addressing {
 	case "Immediate":
-		return byte(opeland)
+		return uint8(opeland)
 	default:
 		return c.readByte(opeland)
 	}
 }
 
-func (c *CPU) fetchOpeland(addressing string) (word, error) {
-	var opeland word
+func (c *CPU) fetchOpeland(addressing string) (uint16, error) {
+	var opeland uint16
 	switch addressing {
 	case "Accumulator":
 		// no opeland
 	case "Implied":
 		// no opeland
 	case "Immediate":
-		opeland = word(c.fetchByte())
+		opeland = uint16(c.fetchByte())
 	case "Absolute":
 		opeland = c.fetchWord()
 	case "Absolute, X":
-		opeland = c.fetchWord() + word(c.Registers.X)
+		opeland = c.fetchWord() + uint16(c.Registers.X)
 	case "Absolute, Y":
-		opeland = c.fetchWord() + word(c.Registers.Y)
+		opeland = c.fetchWord() + uint16(c.Registers.Y)
 	case "Zeropage":
-		opeland = word(c.fetchByte())
+		opeland = uint16(c.fetchByte())
 	case "Zeropage, X":
-		opeland = word(c.fetchByte() + c.Registers.X)
+		opeland = uint16(c.fetchByte() + c.Registers.X)
 	case "Zeropage, Y":
-		opeland = word(c.fetchByte() + c.Registers.Y)
+		opeland = uint16(c.fetchByte() + c.Registers.Y)
 	case "Relative":
-		opeland = word(c.fetchByte()) + c.Registers.PC - 0xFF
+		opeland = uint16(c.fetchByte()) + c.Registers.PC - 0xFF
 	case "(Indirect, X)":
-		baseAddr := word(c.fetchByte()) + word(c.Registers.X)
-		opeland = word(c.readByte(baseAddr)) + word(c.readByte(baseAddr+1))<<8
+		baseAddr := uint16(c.fetchByte()) + uint16(c.Registers.X)
+		opeland = uint16(c.readByte(baseAddr)) + uint16(c.readByte(baseAddr+1))<<8
 	case "(Indirect), Y":
-		baseAddr := word(c.fetchByte())
-		opeland = word(c.readByte(baseAddr)) + word(c.readByte(baseAddr+1))<<8 + word(c.Registers.Y)
+		baseAddr := uint16(c.fetchByte())
+		opeland = uint16(c.readByte(baseAddr)) + uint16(c.readByte(baseAddr+1))<<8 + uint16(c.Registers.Y)
 	case "(Indirect)":
 		baseAddr := c.fetchWord()
-		opeland = word(c.readByte(baseAddr)) + word(c.readByte((baseAddr&0xFF00)|(((baseAddr&0xFF)+1)&0xFF)))<<8
+		opeland = uint16(c.readByte(baseAddr)) + uint16(c.readByte((baseAddr&0xFF00)|(((baseAddr&0xFF)+1)&0xFF)))<<8
 	default:
 		return 0, fmt.Errorf("unknown addressing %s", addressing)
 	}
 	return opeland, nil
 }
 
-func (c *CPU) exec(opcode string, opeland word, addressing string) error {
+func (c *CPU) exec(opcode string, opeland uint16, addressing string) error {
 	switch opcode {
 	case "ADC":
 		m := c.getByteByAddressing(opeland, addressing)
@@ -258,21 +259,21 @@ func (c *CPU) exec(opcode string, opeland word, addressing string) error {
 		c.Registers.PC = opeland
 	case "JSR":
 		pc := c.Registers.PC - 1
-		c.push(byte(pc >> 8))
-		c.push(byte(pc))
+		c.push(uint8(pc >> 8))
+		c.push(uint8(pc))
 	case "RTS":
-		c.Registers.PC = word(c.pop()) + word(c.pop())<<8 + 1
+		c.Registers.PC = uint16(c.pop()) + uint16(c.pop())<<8 + 1
 	case "BRK": // TODO
 		// if !c.Registers.P.I {
 		// 	c.Registers.P.B = true
 		// 	c.Registers.PC++
-		// 	c.push(byte(c.Registers.PC >> 8))
-		// 	c.push(byte(c.Registers.PC))
-		// 	c.push(byte(c.Registers.P))
+		// 	c.push(uint8(c.Registers.PC >> 8))
+		// 	c.push(uint8(c.Registers.PC))
+		// 	c.push(uint8(c.Registers.P))
 		// }
 	case "RTI": // TODO
 		// c.Registers.P = c.pop()
-		// c.Registers.PC = word(c.pop()) + word(c.pop())<<8 + 1
+		// c.Registers.PC = uint16(c.pop()) + uint16(c.pop())<<8 + 1
 	case "CMP":
 		data := c.Registers.A - c.getByteByAddressing(opeland, addressing)
 		c.Registers.P.N = isNegative(data)
@@ -363,11 +364,11 @@ func (c *CPU) exec(opcode string, opeland word, addressing string) error {
 		c.Registers.P.N = isNegative(c.Registers.A)
 		c.Registers.P.Z = c.Registers.A == 0
 	case "TSX":
-		c.Registers.X = byte(c.Registers.SP)
+		c.Registers.X = uint8(c.Registers.SP)
 		c.Registers.P.N = isNegative(c.Registers.X)
 		c.Registers.P.Z = c.Registers.X == 0
 	case "TXS":
-		c.Registers.SP = word(c.Registers.X)
+		c.Registers.SP = uint16(c.Registers.X)
 	case "PHA":
 		c.push(c.Registers.A)
 	case "PLA":
@@ -407,7 +408,7 @@ func (c *CPU) Reset() {
 	c.Registers.PC = c.readWord(0xFFFC)
 }
 
-func (c *CPU) Run() (uint8, error) {
+func (c *CPU) Run() (int, error) {
 	b := c.fetchByte()
 	i := instructionSets[b]
 	// fmt.Printf("%x %x: %v\n", c.Registers.PC-1, b, i)
@@ -420,5 +421,5 @@ func (c *CPU) Run() (uint8, error) {
 		return 0, err
 	}
 
-	return i.Cycles, nil
+	return i.Cycle, nil
 }
