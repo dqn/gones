@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type memory = [0x10000]uint8
+type ram [0x10000]uint8
 
 type StatusRegister struct {
 	N, V, R, B, D, I, Z, C bool
@@ -19,7 +19,7 @@ type Registers struct {
 
 type CPU struct {
 	Registers *Registers
-	Memory    *memory
+	ram       *ram
 }
 
 func nthBit(v uint8, n uint8) uint8 {
@@ -31,18 +31,18 @@ func isNegative(v uint8) bool {
 }
 
 func New(programROM []uint8) *CPU {
-	var m memory
+	var r ram
 	for i := 0; i < len(programROM); i++ {
-		m[0x8000+i] = programROM[i]
+		r[0x8000+i] = programROM[i]
 	}
-	c := &CPU{Memory: &m}
+	c := &CPU{ram: &r}
 	c.Reset()
 
 	return c
 }
 
 func (c *CPU) readByte(addr uint16) uint8 {
-	return c.Memory[addr]
+	return c.ram[addr]
 }
 
 func (c *CPU) readWord(addr uint16) uint16 {
@@ -50,7 +50,7 @@ func (c *CPU) readWord(addr uint16) uint16 {
 }
 
 func (c *CPU) writeByte(addr uint16, data uint8) {
-	c.Memory[addr] = data
+	c.ram[addr] = data
 }
 
 func (n *CPU) fetchByte() uint8 {

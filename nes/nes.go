@@ -14,8 +14,8 @@ const (
 )
 
 type NES struct {
-	ppu *ppu.PPU
 	cpu *cpu.CPU
+	ppu *ppu.PPU
 }
 
 func New(path string) (*NES, error) {
@@ -29,8 +29,8 @@ func New(path string) (*NES, error) {
 	characterROMEnd := programROMEnd + characterROMSizePerPage*characterROMPages
 
 	nes := &NES{
-		ppu: ppu.New(buf[programROMEnd:characterROMEnd]),
 		cpu: cpu.New(buf[nesHeaderSize:programROMEnd]),
+		ppu: ppu.New(buf[programROMEnd:characterROMEnd]),
 	}
 
 	return nes, nil
