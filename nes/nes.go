@@ -1,11 +1,13 @@
 package nes
 
 import (
+	"image/color"
 	"io/ioutil"
 
 	"github.com/dqn/gones/cpu"
 	"github.com/dqn/gones/ppu"
 	"github.com/dqn/gones/ram"
+	"github.com/hajimehoshi/ebiten"
 )
 
 const (
@@ -34,11 +36,9 @@ func New(path string) (*NES, error) {
 	}
 
 	programROM, characterROM := splitROM(buf)
-	var ram ram.RAM
-
 	ppuBus := ppu.NewBus(characterROM)
 	ppu := ppu.New(ppuBus)
-	cpuBus := cpu.NewBus(&ram, programROM, ppu)
+	cpuBus := cpu.NewBus(&ram.RAM{}, programROM, ppu)
 	cpu := cpu.New(cpuBus)
 
 	nes := &NES{cpu, ppu}
@@ -46,12 +46,40 @@ func New(path string) (*NES, error) {
 	return nes, nil
 }
 
-func (n *NES) Run() error {
-	for i := 0; i < 200; i++ {
-		_, err := n.cpu.Run()
+func (n *NES) update(screen *ebiten.Image) error {
+	if ebiten.IsDrawingSkipped() {
+		return nil
+	}
+
+	for {
+		cycle, err := n.cpu.Run()
 		if err != nil {
 			return err
 		}
+
+		b := n.ppu.Run(cycle * 3)
+		if b == nil {
+			continue
+		}
+
+		for i := 0; i < 240; i++ {
+			for j := 0; j < 256; j++ {
+				if b[i][j] == nil {
+					continue
+				}
+				// fmt.Println(b[i][j])
+				screen.Set(i, j, color.Color(b[i][j]))
+			}
+		}
+		break
+	}
+
+	return nil
+}
+
+func (n *NES) Run() error {
+	if err := ebiten.Run(n.update, 256, 240, 1, "gones"); err != nil {
+		return err
 	}
 	return nil
 }

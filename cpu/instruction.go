@@ -4,7 +4,7 @@ type InstructionSet struct {
 	Opcode     string
 	Addressing string
 	Bytes      uint8
-	Cycle      int
+	Cycle      uint
 }
 
 var instructionSets = map[byte]*InstructionSet{

@@ -402,7 +402,7 @@ func (c *CPU) Reset() {
 	c.registers.PC = c.readWord(0xFFFC)
 }
 
-func (c *CPU) Run() (int, error) {
+func (c *CPU) Run() (uint, error) {
 	b := c.fetchByte()
 	i := instructionSets[b]
 	// fmt.Printf("%x %x: %v\n", c.registers.PC-1, b, i)

@@ -26,8 +26,7 @@ type PPUBus struct {
 }
 
 func NewBus(characterROM []uint8) *PPUBus {
-	var v VRAM
-	return &PPUBus{&v, characterROM}
+	return &PPUBus{&VRAM{}, characterROM}
 }
 
 func (b *PPUBus) Read(addr uint16) uint8 {
@@ -47,4 +46,5 @@ func (b *PPUBus) Write(addr uint16, data uint8) {
 	case addr < 0x3F00:
 		b.vram[addr] = data
 	}
+	// println("!!!", addr)
 }
