@@ -64,10 +64,6 @@ func (n *NES) update(screen *ebiten.Image) error {
 
 		for i := 0; i < 240; i++ {
 			for j := 0; j < 256; j++ {
-				if b[i][j] == nil {
-					continue
-				}
-				// fmt.Println(b[i][j])
 				screen.Set(j, i, color.Color(b[i][j]))
 			}
 		}

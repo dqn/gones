@@ -9,7 +9,7 @@ const (
 	height = 240
 )
 
-var palette = [...]color.RGBA{
+var colors = [...]color.RGBA{
 	{0x80, 0x80, 0x80, 0xFF}, {0x00, 0x3D, 0xA6, 0xFF}, {0x00, 0x12, 0xB0, 0xFF}, {0x44, 0x00, 0x96, 0xFF},
 	{0xA1, 0x00, 0x5E, 0xFF}, {0xC7, 0x00, 0x28, 0xFF}, {0xBA, 0x06, 0x00, 0xFF}, {0x8C, 0x17, 0x00, 0xFF},
 	{0x5C, 0x2F, 0x00, 0xFF}, {0x10, 0x45, 0x00, 0xFF}, {0x05, 0x4A, 0x00, 0xFF}, {0x00, 0x47, 0x2E, 0xFF},
@@ -30,6 +30,7 @@ var palette = [...]color.RGBA{
 
 type background [height][width]*color.RGBA
 type sprite [8][8]uint8
+type palette [4]uint8
 
 type PPU struct {
 	bus        *PPUBus
@@ -53,11 +54,14 @@ func (p *PPU) WritePPUAddr(data uint8) {
 }
 
 func (p *PPU) ReadPPUData() uint8 {
-	return p.bus.Read(p.addr)
+	tmp := p.addr
+	p.addr++
+	return p.bus.Read(tmp)
 }
 
 func (p *PPU) WritePPUData(data uint8) {
 	p.bus.Write(p.addr, data)
+	p.addr++
 }
 
 func (p *PPU) readByte(addr uint16) uint8 {
@@ -65,12 +69,17 @@ func (p *PPU) readByte(addr uint16) uint8 {
 }
 
 func (p *PPU) getAttribute(x uint, y uint) uint8 {
-	addr := 0x23C0 + uint16(x/32+(y/32)*0x0F)
+	addr := 0x23C0 + uint16(x/32+(y/32)*0x08)
 	return p.readByte(addr)
 }
 
+func (p *PPU) getSpriteAddress(x uint, y uint) uint16 {
+	addr := 0x2000 + uint16(x/8+(y/8)*0x20)
+	return uint16(p.readByte(addr)) * 0x10
+}
+
 func (p *PPU) getSprite(x uint, y uint) *sprite {
-	baseAddr := 0x2000 + uint16((x/8)+(y/8)*0x2F)
+	baseAddr := p.getSpriteAddress(x, y)
 	s := sprite{}
 	for i := uint16(0); i < 16; i++ {
 		d := p.readByte(baseAddr + i)
@@ -81,29 +90,37 @@ func (p *PPU) getSprite(x uint, y uint) *sprite {
 	return &s
 }
 
+func (p *PPU) getPalette(index uint8) *palette {
+	baseAddr := 0x3F00 + uint16(0x04*index)
+	palette := palette{}
+	for i := uint16(0); i < 4; i++ {
+		palette[i] = p.readByte(baseAddr + i)
+	}
+	return &palette
+}
+
 func (p *PPU) calcRGBA(x uint, y uint) *color.RGBA {
 	attr := p.getAttribute(x, y)
 	sprite := p.getSprite(x, y)
 	index := (attr >> sprite[y%8][x%8]) & 0b11
-	return &palette[index]
+	palette := p.getPalette(index)
+	return &colors[palette[sprite[y%8][x%8]]]
 }
 
 func (p *PPU) Run(cycle uint) *background {
 	p.cycle += cycle
-	// println(p.line, p.cycle, p.addr)
 
 	if p.cycle < 341 {
 		return nil
 	}
-
 	p.cycle -= 341
-	p.line++
 
 	if p.line < height {
 		for i := uint(0); i < width; i++ {
 			p.background[p.line][i] = p.calcRGBA(i, p.line)
 		}
 	}
+	p.line++
 
 	if p.line < 262 {
 		return nil
