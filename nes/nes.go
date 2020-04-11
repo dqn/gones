@@ -68,7 +68,7 @@ func (n *NES) update(screen *ebiten.Image) error {
 					continue
 				}
 				// fmt.Println(b[i][j])
-				screen.Set(i, j, color.Color(b[i][j]))
+				screen.Set(j, i, color.Color(b[i][j]))
 			}
 		}
 		break

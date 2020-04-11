@@ -31,10 +31,10 @@ func NewBus(characterROM []uint8) *PPUBus {
 
 func (b *PPUBus) Read(addr uint16) uint8 {
 	switch {
+	case addr < 0x2000:
+		return b.characterROM[addr]
 	case addr < 0x3F00:
 		return b.vram[addr]
-	case addr < 0x3F20:
-		return b.characterROM[addr-0x3F00]
 	}
 
 	println("!!!", addr)
@@ -42,9 +42,10 @@ func (b *PPUBus) Read(addr uint16) uint8 {
 }
 
 func (b *PPUBus) Write(addr uint16, data uint8) {
+	// fmt.Printf("!!! %x 0x%x\n", addr, data)
 	switch {
+	case addr < 0x2000:
 	case addr < 0x3F00:
 		b.vram[addr] = data
 	}
-	// println("!!!", addr)
 }

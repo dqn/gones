@@ -67,7 +67,7 @@ func (c *CPU) push(data uint8) {
 
 func (c *CPU) pop() uint8 {
 	c.registers.SP++
-	// return c.readByte(c.registers.SP|0x0100)
+	// return c.readByte(c.registers.SP | 0x0100)
 	return c.readByte(c.registers.SP)
 }
 
@@ -102,7 +102,13 @@ func (c *CPU) fetchOpeland(addressing string) (uint16, error) {
 	case "Zeropage, Y":
 		opeland = uint16(c.fetchByte() + c.registers.Y)
 	case "Relative":
-		opeland = uint16(c.fetchByte()) + c.registers.PC - 0xFF
+		baseAddr := uint16(c.fetchByte())
+		if baseAddr < 0x80 {
+			opeland = baseAddr
+		} else {
+			opeland = baseAddr - 0x0100
+		}
+		opeland += c.registers.PC
 	case "(Indirect, X)":
 		baseAddr := uint16(c.fetchByte()) + uint16(c.registers.X)
 		opeland = uint16(c.readByte(baseAddr)) + uint16(c.readByte(baseAddr+1))<<8

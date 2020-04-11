@@ -50,5 +50,7 @@ func (b *CPUBus) Write(addr uint16, data uint8) {
 		b.ppu.WritePPUAddr(data)
 	case addr == 0x2007:
 		b.ppu.WritePPUData(data)
+	default:
+		// println("!!!", addr)
 	}
 }
