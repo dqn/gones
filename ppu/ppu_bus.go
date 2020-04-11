@@ -21,7 +21,7 @@ package ppu
 type VRAM [0x4000]uint8
 
 type PPUBus struct {
-	CharacterROM []uint8
+	characterROM []uint8
 }
 
 func NewBus(characterROM []uint8) *PPUBus {
@@ -29,8 +29,9 @@ func NewBus(characterROM []uint8) *PPUBus {
 }
 
 func (b *PPUBus) Read(addr uint16) uint8 {
-	return 0
+	return b.characterROM[addr]
 }
 
 func (b *PPUBus) Write(addr uint16, data uint8) {
+	b.characterROM[addr] = data
 }

@@ -19,9 +19,9 @@ import (
 // 0xC000～0xFFFF	0x4000	PRG-ROM
 
 type CPUBus struct {
-	RAM        *ram.RAM
-	ProgramROM []uint8
-	PPU        *ppu.PPU
+	ram        *ram.RAM
+	programROM []uint8
+	ppu        *ppu.PPU
 }
 
 func NewBus(ram *ram.RAM, programROM []uint8, ppu *ppu.PPU) *CPUBus {
@@ -31,12 +31,12 @@ func NewBus(ram *ram.RAM, programROM []uint8, ppu *ppu.PPU) *CPUBus {
 func (b *CPUBus) Read(addr uint16) uint8 {
 	switch {
 	case addr >= 0x8000:
-		return b.ProgramROM[addr-0x8000]
+		return b.programROM[addr-0x8000]
 	default:
-		return b.RAM[addr]
+		return b.ram[addr]
 	}
 }
 
 func (b *CPUBus) Write(addr uint16, data uint8) {
-	b.RAM[addr] = data
+	b.ram[addr] = data
 }
