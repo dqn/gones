@@ -1,4 +1,4 @@
-package cpubus
+package cpu
 
 import (
 	"github.com/dqn/gones/ppu"
@@ -24,7 +24,7 @@ type CPUBus struct {
 	PPU        *ppu.PPU
 }
 
-func New(ram *ram.RAM, programROM []uint8, ppu *ppu.PPU) *CPUBus {
+func NewBus(ram *ram.RAM, programROM []uint8, ppu *ppu.PPU) *CPUBus {
 	return &CPUBus{ram, programROM, ppu}
 }
 

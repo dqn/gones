@@ -21,7 +21,7 @@ func run() error {
 		return err
 	}
 	return n.Run()
-	// if err := ebiten.Run(update, 320, 240, 1, "gones"); err != nil {
+	// if err := ebiten.Run(update, 256, 240, 1, "gones"); err != nil {
 	// 	log.Fatal(err)
 	// }
 }

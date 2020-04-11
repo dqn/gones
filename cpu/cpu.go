@@ -2,8 +2,6 @@ package cpu
 
 import (
 	"fmt"
-
-	"github.com/dqn/gones/cpubus"
 )
 
 type StatusRegister struct {
@@ -19,7 +17,7 @@ type Registers struct {
 
 type CPU struct {
 	registers *Registers
-	bus       *cpubus.CPUBus
+	bus       *CPUBus
 }
 
 func nthBit(v uint8, n uint8) uint8 {
@@ -30,7 +28,7 @@ func isNegative(v uint8) bool {
 	return nthBit(v, 7) == 1
 }
 
-func New(cpuBus *cpubus.CPUBus) *CPU {
+func New(cpuBus *CPUBus) *CPU {
 	c := &CPU{bus: cpuBus}
 	c.Reset()
 

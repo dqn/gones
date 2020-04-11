@@ -4,9 +4,7 @@ import (
 	"io/ioutil"
 
 	"github.com/dqn/gones/cpu"
-	"github.com/dqn/gones/cpubus"
 	"github.com/dqn/gones/ppu"
-	"github.com/dqn/gones/ppubus"
 	"github.com/dqn/gones/ram"
 )
 
@@ -38,9 +36,9 @@ func New(path string) (*NES, error) {
 	programROM, characterROM := splitROM(buf)
 	var ram ram.RAM
 
-	ppuBus := ppubus.New(characterROM)
+	ppuBus := ppu.NewBus(characterROM)
 	ppu := ppu.New(ppuBus)
-	cpuBus := cpubus.New(&ram, programROM, ppu)
+	cpuBus := cpu.NewBus(&ram, programROM, ppu)
 	cpu := cpu.New(cpuBus)
 
 	nes := &NES{cpu, ppu}

@@ -1,4 +1,4 @@
-package ppubus
+package ppu
 
 // https://qiita.com/bokuweb/items/1575337bef44ae82f4d3#%E3%83%A1%E3%83%A2%E3%83%AA%E3%83%9E%E3%83%83%E3%83%97-1
 
@@ -24,7 +24,7 @@ type PPUBus struct {
 	CharacterROM []uint8
 }
 
-func New(characterROM []uint8) *PPUBus {
+func NewBus(characterROM []uint8) *PPUBus {
 	return &PPUBus{characterROM}
 }
 

@@ -1,7 +1,5 @@
 package ppu
 
-import "github.com/dqn/gones/ppubus"
-
 const (
 	width  = 256
 	height = 240
@@ -31,7 +29,7 @@ type background [height][width]*color
 type sprite [8][8]uint8
 
 type PPU struct {
-	bus        *ppubus.PPUBus
+	bus        *PPUBus
 	cycle      uint
 	line       uint
 	background *background
@@ -42,7 +40,7 @@ type Tile struct {
 	PaletteId uint8
 }
 
-func New(ppuBus *ppubus.PPUBus) *PPU {
+func New(ppuBus *PPUBus) *PPU {
 	return &PPU{bus: ppuBus}
 }
 
