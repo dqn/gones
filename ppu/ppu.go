@@ -1,5 +1,7 @@
 package ppu
 
+import "github.com/dqn/gones/ppubus"
+
 const (
 	width  = 256
 	height = 240
@@ -24,13 +26,12 @@ var palette = [...]*color{
 	{0x99, 0xFF, 0xFC}, {0xDD, 0xDD, 0xDD}, {0x11, 0x11, 0x11}, {0x11, 0x11, 0x11},
 }
 
-type vram [0x4000]uint8
 type color [3]uint8
 type background [height][width]*color
 type sprite [8][8]uint8
 
 type PPU struct {
-	vram       *vram
+	bus        *ppubus.PPUBus
 	cycle      uint
 	line       uint
 	background *background
@@ -41,16 +42,12 @@ type Tile struct {
 	PaletteId uint8
 }
 
-func New(characterROM []uint8) *PPU {
-	var v vram
-	for i := 0; i < len(characterROM); i++ {
-		v[i] = characterROM[i]
-	}
-	return &PPU{vram: &v}
+func New(ppuBus *ppubus.PPUBus) *PPU {
+	return &PPU{bus: ppuBus}
 }
 
 func (p *PPU) readByte(addr uint16) uint8 {
-	return p.vram[addr]
+	return p.bus.Read(addr)
 }
 
 func (p *PPU) getAttribute(x uint, y uint) uint8 {
