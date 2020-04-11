@@ -32,6 +32,7 @@ type PPU struct {
 	bus        *PPUBus
 	cycle      uint
 	line       uint
+	addr       uint16
 	background *background
 }
 
@@ -42,6 +43,18 @@ type Tile struct {
 
 func New(ppuBus *PPUBus) *PPU {
 	return &PPU{bus: ppuBus}
+}
+
+func (p *PPU) WritePPUAddr(data uint8) {
+	p.addr = p.addr<<4 + uint16(data)
+}
+
+func (p *PPU) ReadPPUData() uint8 {
+	return p.bus.Read(p.addr)
+}
+
+func (p *PPU) WritePPUData(data uint8) {
+	p.bus.Write(p.addr, data)
 }
 
 func (p *PPU) readByte(addr uint16) uint8 {

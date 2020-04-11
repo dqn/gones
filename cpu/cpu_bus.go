@@ -30,13 +30,25 @@ func NewBus(ram *ram.RAM, programROM []uint8, ppu *ppu.PPU) *CPUBus {
 
 func (b *CPUBus) Read(addr uint16) uint8 {
 	switch {
+	case addr < 0x2000:
+		return b.ram[addr]
+	case addr == 0x2007:
+		return b.ppu.ReadPPUData()
 	case addr >= 0x8000:
 		return b.programROM[addr-0x8000]
-	default:
-		return b.ram[addr]
 	}
+
+	println("!!!", addr)
+	panic(1)
 }
 
 func (b *CPUBus) Write(addr uint16, data uint8) {
-	b.ram[addr] = data
+	switch {
+	case addr < 0x2000:
+		b.ram[addr] = data
+	case addr == 0x2006:
+		b.ppu.WritePPUAddr(data)
+	case addr == 0x2007:
+		b.ppu.WritePPUData(data)
+	}
 }
