@@ -5,8 +5,10 @@ import (
 )
 
 const (
-	width  = 256
-	height = 240
+	width        = 256
+	height       = 240
+	cyclePerLine = 341
+	vBlank       = 20
 )
 
 var colors = [...]color.RGBA{
@@ -38,11 +40,6 @@ type PPU struct {
 	line       uint
 	addr       uint16
 	background *background
-}
-
-type Tile struct {
-	Sprite    *sprite
-	PaletteId uint8
 }
 
 func New(ppuBus *PPUBus) *PPU {
@@ -110,10 +107,10 @@ func (p *PPU) calcRGBA(x uint, y uint) *color.RGBA {
 func (p *PPU) Run(cycle uint) *background {
 	p.cycle += cycle
 
-	if p.cycle < 341 {
+	if p.cycle < cyclePerLine {
 		return nil
 	}
-	p.cycle -= 341
+	p.cycle -= cyclePerLine
 
 	if p.line < height {
 		for i := uint(0); i < width; i++ {
@@ -122,7 +119,7 @@ func (p *PPU) Run(cycle uint) *background {
 	}
 	p.line++
 
-	if p.line < 262 {
+	if p.line < height+vBlank {
 		return nil
 	}
 

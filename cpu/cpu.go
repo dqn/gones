@@ -60,14 +60,12 @@ func (n *CPU) fetchWord() uint16 {
 }
 
 func (c *CPU) push(data uint8) {
-	// c.writeByte(c.registers.SP|0x0100, data)
 	c.writeByte(c.registers.SP, data)
 	c.registers.SP--
 }
 
 func (c *CPU) pop() uint8 {
 	c.registers.SP++
-	// return c.readByte(c.registers.SP | 0x0100)
 	return c.readByte(c.registers.SP)
 }
 

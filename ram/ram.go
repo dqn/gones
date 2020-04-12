@@ -1,3 +1,3 @@
 package ram
 
-type RAM [0x10000]uint8
+type RAM [0x0800]uint8
