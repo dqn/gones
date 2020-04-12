@@ -35,6 +35,46 @@ func New(cpuBus *CPUBus) *CPU {
 	return c
 }
 
+func (s *StatusRegister) Uint8() uint8 {
+	var v uint8
+	if s.N {
+		v += 1 << 7
+	}
+	if s.V {
+		v += 1 << 6
+	}
+	if s.R {
+		v += 1 << 5
+	}
+	if s.B {
+		v += 1 << 4
+	}
+	if s.D {
+		v += 1 << 3
+	}
+	if s.I {
+		v += 1 << 2
+	}
+	if s.Z {
+		v += 1 << 1
+	}
+	if s.C {
+		v += 1
+	}
+	return v
+}
+
+func (s *StatusRegister) SetByValue(v uint8) {
+	s.N = v&0b10000000 != 0
+	s.V = v&0b01000000 != 0
+	s.R = v&0b00100000 != 0
+	s.B = v&0b00010000 != 0
+	s.D = v&0b00001000 != 0
+	s.I = v&0b00000100 != 0
+	s.Z = v&0b00000010 != 0
+	s.C = v&0b00000001 != 0
+}
+
 func (c *CPU) readByte(addr uint16) uint8 {
 	return c.bus.Read(addr)
 }
@@ -261,17 +301,19 @@ func (c *CPU) exec(opcode string, opeland uint16, addressing string) error {
 		c.push(uint8(pc))
 	case "RTS":
 		c.registers.PC = uint16(c.pop()) + uint16(c.pop())<<8 + 1
-	case "BRK": // TODO
-		// if !c.registers.P.I {
-		// 	c.registers.P.B = true
-		// 	c.registers.PC++
-		// 	c.push(uint8(c.registers.PC >> 8))
-		// 	c.push(uint8(c.registers.PC))
-		// 	c.push(uint8(c.registers.P))
-		// }
-	case "RTI": // TODO
-		// c.registers.P = c.pop()
-		// c.registers.PC = uint16(c.pop()) + uint16(c.pop())<<8 + 1
+	case "BRK": // TODO: 未検証
+		if !c.registers.P.I {
+			c.registers.P.B = true
+			c.registers.PC++
+			c.push(uint8(c.registers.PC >> 8))
+			c.push(uint8(c.registers.PC))
+			c.push(c.registers.P.Uint8())
+			c.registers.P.I = true
+			c.registers.PC = c.readWord(0xFFFE)
+		}
+	case "RTI":
+		c.registers.P.SetByValue(c.pop())
+		c.registers.PC = uint16(c.pop()) + uint16(c.pop())<<8
 	case "CMP":
 		data := c.registers.A - c.getByteByAddressing(opeland, addressing)
 		c.registers.P.N = isNegative(data)
@@ -374,9 +416,9 @@ func (c *CPU) exec(opcode string, opeland uint16, addressing string) error {
 		c.registers.P.N = isNegative(c.registers.A)
 		c.registers.P.Z = c.registers.A == 0
 	case "PHP":
-		// TODO
+		c.push(c.registers.P.Uint8())
 	case "PLP":
-		// TODO
+		c.registers.P.SetByValue(c.pop())
 	case "NOP":
 		// no operation
 	default:
