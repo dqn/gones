@@ -12,10 +12,10 @@ $ go get github.com/dqn/gones
 
 [WIP]
 
-Hello, World! が動きます。`sample1/sample1.nes` が必要です。
+Hello, World! が動きます。
 
 ```bash
-$ gones
+$ gones <nes file>
 ```
 
 !["sample"](./docs/sample.png)
