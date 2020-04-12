@@ -1,6 +1,7 @@
 package ppu
 
 import (
+	"fmt"
 	"image/color"
 )
 
@@ -38,7 +39,10 @@ type PPU struct {
 	bus        *PPUBus
 	cycle      uint
 	line       uint
-	addr       uint16
+	ppuctrl    uint8
+	ppumask    uint8
+	ppuscroll  uint8
+	ppuaddr    uint16
 	background *background
 }
 
@@ -46,19 +50,37 @@ func New(ppuBus *PPUBus) *PPU {
 	return &PPU{bus: ppuBus, background: &background{}}
 }
 
-func (p *PPU) WritePPUAddr(data uint8) {
-	p.addr = p.addr<<8 + uint16(data)
+func (p *PPU) ReadRegister(addr uint16) uint8 {
+	switch addr {
+	case 0x2002: // TODO
+		return 0
+	case 0x2007:
+		tmp := p.ppuaddr
+		p.ppuaddr++
+		return p.bus.Read(tmp)
+	default:
+		fmt.Printf("ppu / ReadRegister 0x%x\n", addr)
+		panic(1)
+	}
 }
 
-func (p *PPU) ReadPPUData() uint8 {
-	tmp := p.addr
-	p.addr++
-	return p.bus.Read(tmp)
-}
-
-func (p *PPU) WritePPUData(data uint8) {
-	p.bus.Write(p.addr, data)
-	p.addr++
+func (p *PPU) WriteRegister(addr uint16, data uint8) {
+	switch addr {
+	case 0x2000:
+		p.ppuctrl = data
+	case 0x2001:
+		p.ppumask = data
+	case 0x2005:
+		p.ppuscroll = data
+	case 0x2006:
+		p.ppuaddr = p.ppuaddr<<8 + uint16(data)
+	case 0x2007:
+		p.bus.Write(p.ppuaddr, data)
+		p.ppuaddr++
+	default:
+		fmt.Printf("ppu / WriteRegister 0x%x\n", addr)
+		panic(1)
+	}
 }
 
 func (p *PPU) readByte(addr uint16) uint8 {

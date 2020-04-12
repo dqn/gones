@@ -1,6 +1,8 @@
 package cpu
 
 import (
+	"fmt"
+
 	"github.com/dqn/gones/ppu"
 	"github.com/dqn/gones/ram"
 )
@@ -30,27 +32,41 @@ func NewBus(ram *ram.RAM, programROM []uint8, ppu *ppu.PPU) *CPUBus {
 
 func (b *CPUBus) Read(addr uint16) uint8 {
 	switch {
-	case addr < 0x2000:
+	case addr >= 0x0000 && addr < 0x0800:
 		return b.ram[addr]
-	case addr == 0x2007:
-		return b.ppu.ReadPPUData()
-	case addr >= 0x8000:
+	case addr >= 0x0800 && addr < 0x2000:
+		return b.ram[addr-0x0800]
+	case addr >= 0x2000 && addr < 0x2008:
+		return b.ppu.ReadRegister(addr)
+	case addr >= 0x2008 && addr < 0x4000:
+		return b.ppu.ReadRegister(addr - 0x0008)
+	case addr >= 0xC000 && addr <= 0xFFFF:
+		if len(b.programROM) <= 0x4000 {
+			return b.programROM[addr-0xC000]
+		}
 		return b.programROM[addr-0x8000]
+	case addr >= 0x8000 && addr <= 0xFFFF:
+		return b.programROM[addr-0x8000]
+	default:
+		fmt.Printf("!!! cpu bus / Read 0x%x\n ", addr)
+		panic(1)
 	}
-
-	println("!!!", addr)
-	panic(1)
 }
 
 func (b *CPUBus) Write(addr uint16, data uint8) {
 	switch {
-	case addr < 0x2000:
+	case addr >= 0x0000 && addr < 0x0800:
 		b.ram[addr] = data
-	case addr == 0x2006:
-		b.ppu.WritePPUAddr(data)
-	case addr == 0x2007:
-		b.ppu.WritePPUData(data)
+	case addr >= 0x0800 && addr < 0x2000:
+		b.ram[addr-0x0800] = data
+	case addr >= 0x2000 && addr < 0x2008:
+		b.ppu.WriteRegister(addr, data)
+	case addr >= 0x2008 && addr < 0x4000:
+		b.ppu.WriteRegister(addr-0x0008, data)
+	case addr >= 0x8000 && addr <= 0xFFFF:
+		b.programROM[addr-0x8000] = data
 	default:
-		// println("!!!", addr)
+		fmt.Printf("!!! cpu bus / Write 0x%x\n ", addr)
+		panic(1)
 	}
 }
