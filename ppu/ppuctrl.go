@@ -12,32 +12,32 @@ package ppu
 
 type ppuctrl uint8
 
-func (p ppuctrl) GetBGPatternBaseAddress() uint16 {
-	if p&0b00010000 == 0 {
+func (p *ppuctrl) GetBGPatternBaseAddress() uint16 {
+	if *p&0b00010000 == 0 {
 		return 0x0000
 	} else {
 		return 0x1000
 	}
 }
 
-func (p ppuctrl) GetSpritePatternBaseAddress() uint16 {
-	if p&0b00001000 == 0 {
+func (p *ppuctrl) GetSpritePatternBaseAddress() uint16 {
+	if *p&0b00001000 == 0 {
 		return 0x0000
 	} else {
 		return 0x1000
 	}
 }
 
-func (p ppuctrl) GetIncrementSize() uint16 {
-	if p&0b00000100 == 0 {
+func (p *ppuctrl) GetIncrementSize() uint16 {
+	if *p&0b00000100 == 0 {
 		return 1
 	} else {
 		return 32
 	}
 }
 
-func (p ppuctrl) GetNameTableBaseAddress() uint16 {
-	switch p & 0b00000011 {
+func (p *ppuctrl) GetNameTableBaseAddress() uint16 {
+	switch *p & 0b00000011 {
 	case 0b00:
 		return 0x2000
 	case 0b01:

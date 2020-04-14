@@ -41,6 +41,7 @@ type PPU struct {
 	line      uint
 	ppuctrl   ppuctrl
 	ppumask   uint8
+	ppustatus ppustatus
 	ppuscroll uint8
 	ppuaddr   uint16
 	bg        *bg
@@ -55,8 +56,8 @@ func New(ppuBus *PPUBus) *PPU {
 
 func (p *PPU) ReadRegister(addr uint16) uint8 {
 	switch addr {
-	case 0x2002: // TODO
-		return 0
+	case 0x2002:
+		return p.ppustatus.Uint8()
 	case 0x2007:
 		tmp := p.ppuaddr
 		p.ppuaddr += p.ppuctrl.GetIncrementSize()
@@ -149,9 +150,11 @@ func (p *PPU) Run(cycle uint) *bg {
 	p.line++
 
 	if p.line < height+vBlank {
+		p.ppustatus.SetVBlank(true)
 		return nil
 	}
 
 	p.line = 0
+	p.ppustatus.SetVBlank(false)
 	return p.bg
 }
