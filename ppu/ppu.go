@@ -59,7 +59,7 @@ func (p *PPU) ReadRegister(addr uint16) uint8 {
 		return 0
 	case 0x2007:
 		tmp := p.ppuaddr
-		p.ppuaddr++
+		p.ppuaddr += p.ppuctrl.GetIncrementSize()
 		return p.bus.Read(tmp)
 	default:
 		fmt.Printf("ppu / ReadRegister 0x%x\n", addr)
@@ -79,7 +79,7 @@ func (p *PPU) WriteRegister(addr uint16, data uint8) {
 		p.ppuaddr = p.ppuaddr<<8 + uint16(data)
 	case 0x2007:
 		p.bus.Write(p.ppuaddr, data)
-		p.ppuaddr++
+		p.ppuaddr += p.ppuctrl.GetIncrementSize()
 	default:
 		fmt.Printf("ppu / WriteRegister 0x%x\n", addr)
 		panic(1)
@@ -91,12 +91,12 @@ func (p *PPU) readByte(addr uint16) uint8 {
 }
 
 func (p *PPU) getName(x, y uint) uint8 {
-	addr := 0x2000 + uint16(x/8+(y/8)*0x20) // Name tables
+	addr := p.ppuctrl.GetNameTableBaseAddress() + uint16(x/8+(y/8)*0x20) // Name tables
 	return p.readByte(addr)
 }
 
 func (p *PPU) getAttribute(x, y uint) uint8 {
-	addr := 0x23C0 + uint16(x/32+(y/32)*0x08) // Attribute tables
+	addr := p.ppuctrl.GetNameTableBaseAddress() + 0x03C0 + uint16(x/32+(y/32)*0x08) // Attribute tables
 	return p.readByte(addr)
 }
 
@@ -121,7 +121,7 @@ func (p *PPU) buildPattern(baseAddr uint16) *pattern {
 }
 
 func (p *PPU) getPatternForBackground(x, y uint) *pattern {
-	baseAddr := uint16(p.getName(x, y))*0x10 + p.ppuctrl.getBGPatternBaseAddress()
+	baseAddr := p.ppuctrl.GetBGPatternBaseAddress() + uint16(p.getName(x, y))*0x10
 	return p.buildPattern(baseAddr)
 }
 
