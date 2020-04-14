@@ -48,7 +48,7 @@ func (b *CPUBus) Read(addr uint16) uint8 {
 	case addr >= 0x8000 && addr <= 0xFFFF:
 		return b.programROM[addr-0x8000]
 	default:
-		fmt.Printf("!!! cpu bus / Read 0x%x\n ", addr)
+		fmt.Printf("!!! cpu bus / Read 0x%x\n", addr)
 		panic(1)
 	}
 }
@@ -69,7 +69,7 @@ func (b *CPUBus) Write(addr uint16, data uint8) {
 	case addr >= 0x8000 && addr <= 0xFFFF:
 		b.programROM[addr-0x8000] = data
 	default:
-		fmt.Printf("!!! cpu bus / Write 0x%x\n ", addr)
+		fmt.Printf("!!! cpu bus / Write 0x%x\n", addr)
 		panic(1)
 	}
 }

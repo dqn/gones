@@ -31,7 +31,7 @@ var colors = [...]color.RGBA{
 	{0x99, 0xFF, 0xFC, 0xFF}, {0xDD, 0xDD, 0xDD, 0xFF}, {0x11, 0x11, 0x11, 0xFF}, {0x11, 0x11, 0x11, 0xFF},
 }
 
-type bg [height][width]*color.RGBA
+type screen [height][width]*color.RGBA
 type pattern [8][8]uint8
 type palette [4]uint8
 type oam [0x0100]uint8
@@ -47,14 +47,14 @@ type PPU struct {
 	ppuscroll uint8
 	ppuaddr   uint16
 	oam       *oam
-	bg        *bg
+	screen    *screen
 }
 
 func New(ppuBus *PPUBus) *PPU {
 	return &PPU{
-		bus: ppuBus,
-		oam: &oam{},
-		bg:  &bg{},
+		bus:    ppuBus,
+		oam:    &oam{},
+		screen: &screen{},
 	}
 }
 
@@ -137,20 +137,20 @@ func (p *PPU) buildPattern(baseAddr uint16) *pattern {
 	return &pattern
 }
 
-func (p *PPU) getPatternForBackground(x, y uint) *pattern {
-	baseAddr := p.ppuctrl.GetBGPatternBaseAddress() + uint16(p.getName(x, y))*0x10
-	return p.buildPattern(baseAddr)
+func (p *PPU) getPattern(baseAddr uint16, index uint8) *pattern {
+	addr := baseAddr + uint16(index)*0x10
+	return p.buildPattern(addr)
 }
 
 func (p *PPU) calcRGBA(x, y uint) *color.RGBA {
 	attr := p.getAttribute(x, y)
-	pattern := p.getPatternForBackground(x, y)
+	pattern := p.getPattern(p.ppuctrl.GetBGPatternBaseAddress(), p.getName(x, y))
 	index := (attr >> pattern[y%8][x%8]) & 0b11
 	palette := p.getPalette(index)
 	return &colors[palette[pattern[y%8][x%8]]]
 }
 
-func (p *PPU) Run(cycle uint) *bg {
+func (p *PPU) Run(cycle uint) *screen {
 	p.cycle += cycle
 
 	if p.cycle < cyclePerLine {
@@ -160,7 +160,7 @@ func (p *PPU) Run(cycle uint) *bg {
 
 	if p.line < height {
 		for i := uint(0); i < width; i++ {
-			p.bg[p.line][i] = p.calcRGBA(i, p.line)
+			p.screen[p.line][i] = p.calcRGBA(i, p.line)
 		}
 	}
 	p.line++
@@ -170,7 +170,18 @@ func (p *PPU) Run(cycle uint) *bg {
 		return nil
 	}
 
+	for i := 0; i < len(p.oam); i += 4 {
+		x, y := p.oam[i+3], p.oam[i]
+		pattern := p.getPattern(p.ppuctrl.GetSpritePatternBaseAddress(), p.oam[i+1])
+		palette := p.getPalette(p.oam[i+2] & 0b00000011)
+		for dy := uint8(0); dy < 8; dy++ {
+			for dx := uint8(0); dx < 8; dx++ {
+				p.screen[y+dy][x+dx] = &colors[palette[pattern[dy][dx]]]
+			}
+		}
+	}
+
 	p.line = 0
 	p.ppustatus.SetVBlank(false)
-	return p.bg
+	return p.screen
 }
