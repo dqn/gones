@@ -18,15 +18,15 @@ package ppu
 // 0x3F10～0x3F1F	0x0010	スプライトパレット
 // 0x3F20～0x3FFF	-	      0x3F00~0x3F1F のミラー
 
-type VRAM [0x4000]uint8
+type vram [0x4000]uint8
 
 type PPUBus struct {
-	vram         *VRAM
+	vram         *vram
 	characterROM []uint8
 }
 
 func NewBus(characterROM []uint8) *PPUBus {
-	return &PPUBus{&VRAM{}, characterROM}
+	return &PPUBus{&vram{}, characterROM}
 }
 
 func (b *PPUBus) Read(addr uint16) uint8 {

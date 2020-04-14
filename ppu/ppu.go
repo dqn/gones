@@ -34,6 +34,7 @@ var colors = [...]color.RGBA{
 type bg [height][width]*color.RGBA
 type pattern [8][8]uint8
 type palette [4]uint8
+type oam [0x0100]uint8
 
 type PPU struct {
 	bus       *PPUBus
@@ -43,15 +44,16 @@ type PPU struct {
 	ppumask   uint8
 	ppustatus ppustatus
 	oamaddr   uint8
-	oamdata   uint8
 	ppuscroll uint8
 	ppuaddr   uint16
+	oam       *oam
 	bg        *bg
 }
 
 func New(ppuBus *PPUBus) *PPU {
 	return &PPU{
 		bus: ppuBus,
+		oam: &oam{},
 		bg:  &bg{},
 	}
 }
@@ -79,7 +81,7 @@ func (p *PPU) WriteRegister(addr uint16, data uint8) {
 	case 0x2003:
 		p.oamaddr = data
 	case 0x2004:
-		p.oamdata = data
+		p.oam[p.oamaddr] = data
 		p.oamaddr++
 	case 0x2005:
 		p.ppuscroll = data
@@ -96,7 +98,7 @@ func (p *PPU) WriteRegister(addr uint16, data uint8) {
 
 func (p *PPU) DMA(data []uint8) {
 	for i := 0; i < len(data); i++ {
-		p.bus.vram[p.oamaddr+uint8(i)] = data[i]
+		p.oam[p.oamaddr+uint8(i)] = data[i]
 	}
 	// TODO: 513 or 514 cycle
 }
