@@ -28,6 +28,13 @@ func isNegative(v uint8) bool {
 	return nthBit(v, 7) == 1
 }
 
+func boolToUint8(b bool) (v uint8) {
+	if b {
+		return 1
+	}
+	return
+}
+
 func New(cpuBus *CPUBus) *CPU {
 	c := &CPU{bus: cpuBus}
 	c.Reset()
@@ -37,34 +44,18 @@ func New(cpuBus *CPUBus) *CPU {
 
 func (s *StatusRegister) Uint8() uint8 {
 	var v uint8
-	if s.N {
-		v += 1 << 7
-	}
-	if s.V {
-		v += 1 << 6
-	}
-	if s.R {
-		v += 1 << 5
-	}
-	if s.B {
-		v += 1 << 4
-	}
-	if s.D {
-		v += 1 << 3
-	}
-	if s.I {
-		v += 1 << 2
-	}
-	if s.Z {
-		v += 1 << 1
-	}
-	if s.C {
-		v += 1
-	}
+	v += boolToUint8(s.N) << 7
+	v += boolToUint8(s.V) << 6
+	v += boolToUint8(s.R) << 5
+	v += boolToUint8(s.B) << 4
+	v += boolToUint8(s.D) << 3
+	v += boolToUint8(s.I) << 2
+	v += boolToUint8(s.Z) << 1
+	v += boolToUint8(s.C) << 0
 	return v
 }
 
-func (s *StatusRegister) SetByValue(v uint8) {
+func (s *StatusRegister) SetByUint8(v uint8) {
 	s.N = v&0b10000000 != 0
 	s.V = v&0b01000000 != 0
 	s.R = v&0b00100000 != 0
@@ -312,7 +303,7 @@ func (c *CPU) exec(opcode string, opeland uint16, addressing string) error {
 			c.registers.PC = c.readWord(0xFFFE)
 		}
 	case "RTI":
-		c.registers.P.SetByValue(c.pop())
+		c.registers.P.SetByUint8(c.pop())
 		c.registers.PC = uint16(c.pop()) + uint16(c.pop())<<8
 	case "CMP":
 		data := c.registers.A - c.getByteByAddressing(opeland, addressing)
@@ -418,7 +409,7 @@ func (c *CPU) exec(opcode string, opeland uint16, addressing string) error {
 	case "PHP":
 		c.push(c.registers.P.Uint8())
 	case "PLP":
-		c.registers.P.SetByValue(c.pop())
+		c.registers.P.SetByUint8(c.pop())
 	case "NOP":
 		// no operation
 	default:

@@ -47,7 +47,10 @@ type PPU struct {
 }
 
 func New(ppuBus *PPUBus) *PPU {
-	return &PPU{bus: ppuBus, background: &background{}}
+	return &PPU{
+		bus:        ppuBus,
+		background: &background{},
+	}
 }
 
 func (p *PPU) ReadRegister(addr uint16) uint8 {
