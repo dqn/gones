@@ -42,6 +42,8 @@ type PPU struct {
 	ppuctrl   ppuctrl
 	ppumask   uint8
 	ppustatus ppustatus
+	oamaddr   uint8
+	oamdata   uint8
 	ppuscroll uint8
 	ppuaddr   uint16
 	bg        *bg
@@ -74,6 +76,11 @@ func (p *PPU) WriteRegister(addr uint16, data uint8) {
 		p.ppuctrl = ppuctrl(data)
 	case 0x2001:
 		p.ppumask = data
+	case 0x2003:
+		p.oamaddr = data
+	case 0x2004:
+		p.oamdata = data
+		p.oamaddr++
 	case 0x2005:
 		p.ppuscroll = data
 	case 0x2006:
@@ -85,6 +92,13 @@ func (p *PPU) WriteRegister(addr uint16, data uint8) {
 		fmt.Printf("ppu / WriteRegister 0x%x\n", addr)
 		panic(1)
 	}
+}
+
+func (p *PPU) DMA(data []uint8) {
+	for i := 0; i < len(data); i++ {
+		p.bus.vram[p.oamaddr+uint8(i)] = data[i]
+	}
+	// TODO: 513 or 514 cycle
 }
 
 func (p *PPU) readByte(addr uint16) uint8 {

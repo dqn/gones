@@ -63,6 +63,9 @@ func (b *CPUBus) Write(addr uint16, data uint8) {
 		b.ppu.WriteRegister(addr, data)
 	case addr >= 0x2008 && addr < 0x4000:
 		b.ppu.WriteRegister(addr-0x0008, data)
+	case addr == 0x4014:
+		baseAddr := uint16(data) << 8
+		b.ppu.DMA(b.ram[baseAddr : baseAddr+0x0100])
 	case addr >= 0x8000 && addr <= 0xFFFF:
 		b.programROM[addr-0x8000] = data
 	default:
