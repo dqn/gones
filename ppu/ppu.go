@@ -31,25 +31,25 @@ var colors = [...]color.RGBA{
 	{0x99, 0xFF, 0xFC, 0xFF}, {0xDD, 0xDD, 0xDD, 0xFF}, {0x11, 0x11, 0x11, 0xFF}, {0x11, 0x11, 0x11, 0xFF},
 }
 
-type background [height][width]*color.RGBA
-type sprite [8][8]uint8
+type bg [height][width]*color.RGBA
+type pattern [8][8]uint8
 type palette [4]uint8
 
 type PPU struct {
-	bus        *PPUBus
-	cycle      uint
-	line       uint
-	ppuctrl    uint8
-	ppumask    uint8
-	ppuscroll  uint8
-	ppuaddr    uint16
-	background *background
+	bus       *PPUBus
+	cycle     uint
+	line      uint
+	ppuctrl   ppuctrl
+	ppumask   uint8
+	ppuscroll uint8
+	ppuaddr   uint16
+	bg        *bg
 }
 
 func New(ppuBus *PPUBus) *PPU {
 	return &PPU{
-		bus:        ppuBus,
-		background: &background{},
+		bus: ppuBus,
+		bg:  &bg{},
 	}
 }
 
@@ -70,7 +70,7 @@ func (p *PPU) ReadRegister(addr uint16) uint8 {
 func (p *PPU) WriteRegister(addr uint16, data uint8) {
 	switch addr {
 	case 0x2000:
-		p.ppuctrl = data
+		p.ppuctrl = ppuctrl(data)
 	case 0x2001:
 		p.ppumask = data
 	case 0x2005:
@@ -90,26 +90,14 @@ func (p *PPU) readByte(addr uint16) uint8 {
 	return p.bus.Read(addr)
 }
 
-func (p *PPU) getAttribute(x uint, y uint) uint8 {
-	addr := 0x23C0 + uint16(x/32+(y/32)*0x08)
+func (p *PPU) getName(x, y uint) uint8 {
+	addr := 0x2000 + uint16(x/8+(y/8)*0x20) // Name tables
 	return p.readByte(addr)
 }
 
-func (p *PPU) getSpriteAddress(x uint, y uint) uint16 {
-	addr := 0x2000 + uint16(x/8+(y/8)*0x20)
-	return uint16(p.readByte(addr)) * 0x10
-}
-
-func (p *PPU) getSprite(x uint, y uint) *sprite {
-	baseAddr := p.getSpriteAddress(x, y)
-	s := sprite{}
-	for i := uint16(0); i < 16; i++ {
-		d := p.readByte(baseAddr + i)
-		for j := 0; j < 8; j++ {
-			s[i%8][j] += ((d >> (7 - j)) & 0b01) << (i / 8)
-		}
-	}
-	return &s
+func (p *PPU) getAttribute(x, y uint) uint8 {
+	addr := 0x23C0 + uint16(x/32+(y/32)*0x08) // Attribute tables
+	return p.readByte(addr)
 }
 
 func (p *PPU) getPalette(index uint8) *palette {
@@ -121,15 +109,31 @@ func (p *PPU) getPalette(index uint8) *palette {
 	return &palette
 }
 
-func (p *PPU) calcRGBA(x uint, y uint) *color.RGBA {
-	attr := p.getAttribute(x, y)
-	sprite := p.getSprite(x, y)
-	index := (attr >> sprite[y%8][x%8]) & 0b11
-	palette := p.getPalette(index)
-	return &colors[palette[sprite[y%8][x%8]]]
+func (p *PPU) buildPattern(baseAddr uint16) *pattern {
+	pattern := pattern{}
+	for i := uint16(0); i < 16; i++ {
+		d := p.readByte(baseAddr + i)
+		for j := 0; j < 8; j++ {
+			pattern[i%8][j] += ((d >> (7 - j)) & 0b01) << (i / 8)
+		}
+	}
+	return &pattern
 }
 
-func (p *PPU) Run(cycle uint) *background {
+func (p *PPU) getPatternForBackground(x, y uint) *pattern {
+	baseAddr := uint16(p.getName(x, y))*0x10 + p.ppuctrl.getBGPatternBaseAddress()
+	return p.buildPattern(baseAddr)
+}
+
+func (p *PPU) calcRGBA(x, y uint) *color.RGBA {
+	attr := p.getAttribute(x, y)
+	pattern := p.getPatternForBackground(x, y)
+	index := (attr >> pattern[y%8][x%8]) & 0b11
+	palette := p.getPalette(index)
+	return &colors[palette[pattern[y%8][x%8]]]
+}
+
+func (p *PPU) Run(cycle uint) *bg {
 	p.cycle += cycle
 
 	if p.cycle < cyclePerLine {
@@ -139,7 +143,7 @@ func (p *PPU) Run(cycle uint) *background {
 
 	if p.line < height {
 		for i := uint(0); i < width; i++ {
-			p.background[p.line][i] = p.calcRGBA(i, p.line)
+			p.bg[p.line][i] = p.calcRGBA(i, p.line)
 		}
 	}
 	p.line++
@@ -149,5 +153,5 @@ func (p *PPU) Run(cycle uint) *background {
 	}
 
 	p.line = 0
-	return p.background
+	return p.bg
 }
