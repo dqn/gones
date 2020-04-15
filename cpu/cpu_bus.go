@@ -3,6 +3,7 @@ package cpu
 import (
 	"fmt"
 
+	"github.com/dqn/gones/controller"
 	"github.com/dqn/gones/ppu"
 	"github.com/dqn/gones/ram"
 )
@@ -24,10 +25,11 @@ type CPUBus struct {
 	ram        *ram.RAM
 	programROM []uint8
 	ppu        *ppu.PPU
+	controller *controller.Controller
 }
 
-func NewBus(ram *ram.RAM, programROM []uint8, ppu *ppu.PPU) *CPUBus {
-	return &CPUBus{ram, programROM, ppu}
+func NewBus(ram *ram.RAM, programROM []uint8, ppu *ppu.PPU, controller *controller.Controller) *CPUBus {
+	return &CPUBus{ram, programROM, ppu, controller}
 }
 
 func (b *CPUBus) Read(addr uint16) uint8 {
@@ -40,6 +42,8 @@ func (b *CPUBus) Read(addr uint16) uint8 {
 		return b.ppu.ReadRegister(addr)
 	case addr >= 0x2008 && addr < 0x4000:
 		return b.ppu.ReadRegister(addr - 0x0008)
+	case addr == 0x4016:
+		return b.controller.ReadButton()
 	case addr >= 0xC000 && addr <= 0xFFFF:
 		if len(b.programROM) <= 0x4000 {
 			return b.programROM[addr-0xC000]
@@ -66,6 +70,8 @@ func (b *CPUBus) Write(addr uint16, data uint8) {
 	case addr == 0x4014:
 		baseAddr := uint16(data) << 8
 		b.ppu.DMA(b.ram[baseAddr : baseAddr+0x0100])
+	case addr == 0x4016:
+		b.controller.Clear()
 	case addr >= 0x8000 && addr <= 0xFFFF:
 		b.programROM[addr-0x8000] = data
 	default:

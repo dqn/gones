@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"io/ioutil"
 
+	"github.com/dqn/gones/controller"
 	"github.com/dqn/gones/cpu"
 	"github.com/dqn/gones/ppu"
 	"github.com/dqn/gones/ram"
@@ -35,10 +36,11 @@ func New(path string) (*NES, error) {
 		return nil, err
 	}
 
+	controller := &controller.Controller{}
 	programROM, characterROM := splitROM(buf)
 	ppuBus := ppu.NewBus(characterROM)
 	ppu := ppu.New(ppuBus)
-	cpuBus := cpu.NewBus(&ram.RAM{}, programROM, ppu)
+	cpuBus := cpu.NewBus(&ram.RAM{}, programROM, ppu, controller)
 	cpu := cpu.New(cpuBus)
 
 	nes := &NES{cpu, ppu}
