@@ -13,5 +13,9 @@ func (p *ppustatus) Uint8() uint8 {
 }
 
 func (p *ppustatus) SetVBlank(b bool) {
-	*p |= 0b10000000
+	if b {
+		*p |= 0b10000000
+	} else {
+		*p &= 0b01111111
+	}
 }
