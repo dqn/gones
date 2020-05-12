@@ -10,12 +10,8 @@ $ go get github.com/dqn/gones
 
 ## Usage
 
-[WIP]
-
-Hello, World! が動きます。
-
 ```bash
-$ gones <nes file>
+$ gones <nes-file-path>
 ```
 
 !["sample"](./docs/sample.png)
