@@ -1,6 +1,6 @@
 # gones
 
-NES emulator written in Go
+Toy NES emulator written in Go.
 
 ## Installation
 
@@ -14,5 +14,8 @@ $ go get github.com/dqn/gones
 $ gones <nes-file-path>
 ```
 
-!["sample"](./docs/sample.png)
+!['demo'](./docs/demo.png)
 
+## License
+
+MIT
