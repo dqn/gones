@@ -1,5 +1,7 @@
 # gones
 
+[![build status](https://github.com/dqn/gones/workflows/build/badge.svg)](https://github.com/dqn/gones/actions)
+
 Toy NES emulator written in Go.
 
 ## Installation
